@@ -3,7 +3,7 @@
 	url = https://github.com/bendidi/deep_sort.git
 [submodule "sort"]
 	path = sort
-	url = https://github.com/bendidi/sort.git
+	url = https://github.com/whitef0x0/sort.git
 [submodule "darkflow"]
 	path = darkflow
-	url = https://github.com/bendidi/darkflow.git
+	url = https://github.com/whitef0x0/darkflow.git

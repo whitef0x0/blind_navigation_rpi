@@ -6,6 +6,8 @@ __pycache__/
 # C extensions
 *.so
 
+cv2_data/face_recog/training_data/s*/
+
 # Distribution / packaging
 .Python
 env/
