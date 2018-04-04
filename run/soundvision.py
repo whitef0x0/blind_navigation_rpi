@@ -20,7 +20,6 @@ import numpy as np
 from time import time as timer
 current_milli_time = lambda: int(round(timer() * 1))
 
-INPUT_FNAME = 'test_video.mov'
 OUTPUT_FNAME    = 'hificode.wav'       # User-defined parameters
 FL       =   500   # Lowest  frequency (Hz) in soundscape
 FH       =  5000   # Highest frequency (Hz)              
