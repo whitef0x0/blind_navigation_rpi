@@ -68,7 +68,7 @@ class Example(object):
 		#self.player.remove()
 		#self.player.delete()
 		#self.sbuffer.delete()
-		# self.listener.delete()
+		#self.listener.delete()
 
 
 
