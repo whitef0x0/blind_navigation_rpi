@@ -121,9 +121,8 @@ def preprocess_cell(px, avg):
 preprocess_matrix = np.vectorize(preprocess_cell)
 preprocess_matrix.excluded.add(1)
 
-def main():
-
-   k     = 0
+def set_constants():
+      k     = 0
    b     = 0
    d     = D
 
@@ -150,6 +149,10 @@ def main():
    else: 
       for i in range(0,M): w[i] = TwoPi * FL + TwoPi * (FH-FL)   *i/(M-1)
    for i in range(0,M): phi0[i] = TwoPi * rnd()
+
+
+def main():
+   set_constants()
 
    cam_id = 0  # First available OpenCV camera
    # Optionally override ID from command line parameter: python hificode_OpenCV.py cam_id
@@ -377,45 +380,14 @@ def main():
    return 0
 
 def setup():
-
-   k     = 0
-   b     = 0
-   d     = D
-
-   # ns = sample_freq * image_to_sound_time
-   # ns = total number of samples per sound byte
-   ns    = 2 * int(0.5*FS*T)
-
-   #Number of samples per pixel
-   m     = int(ns / N)
-   sso   = 0 if HIFI else 128
-   ssm   = 32768 if HIFI else 128
-   scale = 0.5 / math.sqrt(M)
-   dt    = 1.0 / FS
-   v     = 340.0                                 # v = speed of sound (m/s)
-   hs    = 0.20           # hs = characteristic acoustical size of head (m)
-
-   w    = [0 for i in range(M)]
-   phi0 = [0 for i in range(M)]
-   A    = [[0 for j in range(N)] for i in range(M)]  # Empty M x N pixel matrix
-
-   # Set lin|exp (0|1) frequency distribution and random initial phase 
-   if (d): 
-      for i in range(0,M): w[i] = TwoPi * FL * pow(1.0* FH/FL,1.0*i/(M-1))
-   else: 
-      for i in range(0,M): w[i] = TwoPi * FL + TwoPi * (FH-FL)   *i/(M-1)
-   for i in range(0,M): phi0[i] = TwoPi * rnd()
-
-   cam_id = 0  # First available OpenCV camera
-   # Optionally override ID from command line parameter: python hificode_OpenCV.py cam_id
-   if len(sys.argv) > 1: cam_id = int(sys.argv[1])
+   set_constants()
 
    try:
-      cap = cv.VideoCapture(cam_id)   
+      cap = cv.VideoCapture(0)   
       if not cap.isOpened(): 
          return None
    except ValueError:
-      print("Could not open camera", cam_id)
+      print("Could not open camera", 0)
       return None
 
    # Setting standard capture size, may fail; resize later
@@ -476,46 +448,9 @@ def process_frame(cap):
       gray = cv.resize(tmp, (N,M), interpolation = cv.INTER_AREA)
    else: gray=tmp
 
-   start = current_milli_time()
-   if CAM:  # Set live camera image
-
-      #Compute average brightness value (from 0-255) of entire image
-      # avg = 0.0
-      # for i in range(M):
-      #    for j in range(N):
-      #       avg += gray[M-1-i,j]
-      # avg = avg / (N * M)
-
-      avg = np.average(gray)
-      B = np.flip(gray, 1)
-      A = preprocess_matrix(B, avg)
-
-
-      # Set Array A = B where B is 
-      # same as A but only take a susbset of values between 2*avg/3 and 2*avg/3 + 85
-      #all other values are 0 or 255 and then convert this to 2dB steps
-      # for i in range(M):
-      #    for j in range(N):
-      #       #Flip A along the horizontal
-      #       px = gray[M-1-i,j]
-      #       #CONTRAST = 1
-      #       #If px < avg 
-
-      #       #new_px = {
-      #       #  0; px < 2*avg/3
-      #       #  3*px - 2*avg; px >= 2*avg/3 && px <= 2*avg/3 + 85
-      #       #  255; px > 2*avg/3 + 85
-      #       #}
-      #       px += CONTRAST*(px - avg)
-      #       if px > 255: px = 255
-      #       if px <   0: px =   0
-      #       #gray[M-1-i,j] = px
-      #       if px == 0: A[i][j] = 0
-      #       else: A[i][j] = pow(10.0,(px/16-15)/10.0)  # 2dB steps
-
-   end = current_milli_time()
-   #TODO: remove this
-   #print("time to preprocess image: " + str((end - start)/1000))
+   avg = np.average(gray)
+   B = np.flip(gray, 1)
+   A = preprocess_matrix(B, avg)
 
    tau1 = 0.5 / w[M-1]; tau2 = 0.25 * (tau1*tau1)
    y = yl = yr = z = zl = zr = 0.0
@@ -612,7 +547,8 @@ def process_frame(cap):
 
          k=k+1
    end = current_milli_time()
-   print("time to generate wav bytes for frame: " + str((end - start)/1000))
+   #TODO: remove this
+   #print("time to generate wav bytes for frame: " + str((end - start)/1000))
    
    byte_string = bytes(byte_array)
    pygame.mixer.Sound(byte_string).play()

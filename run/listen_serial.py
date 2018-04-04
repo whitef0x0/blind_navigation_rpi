@@ -93,6 +93,10 @@ def main():
             camera = soundvision.setup()
             print('Setup soundvision')
 
+            if camera is None:
+                print("ERROR: Setup failed!")
+                raise
+
             should_break = False
             while(g_current_state != "STOPPED" and should_break == False):
                 should_break = soundvision.process_frame(camera)
