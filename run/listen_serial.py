@@ -2,27 +2,31 @@ import serial
 from start import setup_TFNet
 
 import threading
-
-import logging
-logging.basicConfig(filename='./listen_serial.log',level=logging.DEBUG)
+import soundvision
 
 #Constants
-'''
-g_video_state can either be STOPPED or RUNNING
-'''
+#   g_current_state can either be STOPPED or RUNNING
+#   g_current_category can either be NONE, TRACKING or SOUNDVISION
 
 #Shared variables (shared between threads)
-g_video_state = "STOPPED" #Initialize to STOPPED
+g_current_state = "STOPPED"
+
+g_current_category = "NONE"
 
 #Mutexes for shared variables
-#g_video_state_mutex = threading.Lock()
+g_serial_state_mutex = threading.Lock()
 
-def serialWaitFor(conn, waitfor_char, receive_char):
+def serialWaitFor(conn, waitfor_chars):
     input = conn.read()
-    while(input != waitfor_char):
+    while(input not in waitfor_char):
         input = conn.read()
     
+    receive_char = input.lower()
     conn.write(receive_char)
+    return input
+
+def waitForStop(conn):
+    serialWaitFor(conn, ['S'])
 
 class GetSerialThread(threading.Thread):
     def __init__(self, conn):
@@ -35,16 +39,27 @@ class GetSerialThread(threading.Thread):
         global g_video_state
         while(True):
             print('Waiting for de1 start video command')
-            serialWaitFor(self.conn, b'V', b'v')
-            print('Received de1 start video command')
-            g_video_state = "RUNNING"
+            commandType = serialWaitFor(self.conn, ['V', 'H'])
+            g_current_state = "RUNNING"
 
-            #Wait until video has stopped before sending stop command to DE-1
-            print('Waiting for de1 stop video command')
-            serialWaitFor(self.conn, b'S', b's')
-            print('Received de1 stop video command')
-            g_video_state = "STOPPED"
+            if commandType == 'V':
+                g_current_category = "TRACKING"
+                print('Received de1 start video command')
 
+                #Wait until video has stopped before sending stop command to DE-1
+                print('Waiting for de1 stop video command')
+                waitForStop(self.conn)
+                print('Received de1 stop video command')
+            else:
+                g_current_category = "SOUNDVISION"
+                print('Received de1 start soundvision command')
+
+                #Wait until video has stopped before sending stop command to DE-1
+                print('Waiting for de1 stop soundvision command')
+                waitForStop(self.conn)
+                print('Received de1 stop soundvision command')
+            g_current_category = "NONE"
+            g_current_state = "STOPPED"
 def main():
 
     conn = serial.Serial("/dev/cu.usbserial", 115200, timeout=1)
@@ -61,18 +76,31 @@ def main():
 
 
     while(True):
-        while(g_video_state != "RUNNING"): continue;
-        camera = tfnet.setup_camera()
-        print('Setup darkflow camera')
+        while(g_current_state != "STOPPED" or g_current_category != "NONE"): continue;
+        if g_current_category == "TRACKING":
+            camera = tfnet.setup_camera()
+            print('Setup darkflow camera')
 
-        should_break = False
-        while(g_video_state != "STOPPED" and should_break == False):
-            should_break = tfnet.process_frame()
-        print('Captured all frames')
-        should_break = False
+            should_break = False
+            while(g_current_state != "STOPPED" and should_break == False):
+                should_break = tfnet.process_frame()
+            print('Captured all frames for object tracking')
+            should_break = False
 
-        tfnet.teardown_camera()
-        print('Saved video and metadata to cloud')
+            tfnet.teardown_camera()
+            print('Saved video and metadata to cloud')
+        elif g_current_category == "SOUNDVISION":
+            camera = soundvision.setup()
+            print('Setup soundvision')
+
+            should_break = False
+            while(g_current_state != "STOPPED" and should_break == False):
+                should_break = soundvision.process_frame(camera)
+            print('Captured all frames for soundvision')
+            should_break = False
+
+            soundvision.teardown(camera)
+            print('Successfully exited soundvision')
 
 if __name__ == '__main__':
     main()
