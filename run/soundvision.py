@@ -20,11 +20,8 @@ import numpy as np
 from time import time as timer
 current_milli_time = lambda: int(round(timer() * 1))
 
-#import winsound  # Sound output for Microsoft Windows
-
-INPUT_FNAME = 0 #'test_video.mov'
-
-FNAME    = 'hificode.wav'       # User-defined parameters
+INPUT_FNAME = 'test_video.mov'
+OUTPUT_FNAME    = 'hificode.wav'       # User-defined parameters
 FL       =   500   # Lowest  frequency (Hz) in soundscape
 FH       =  5000   # Highest frequency (Hz)              
 FS       = 44100   # Sample  frequency (Hz)              
@@ -41,6 +38,7 @@ CAM      =     1   # Use OpenCV camera input No|Yes=0|1
 VIEW     =     0   # Screen view for debugging No|Yes=0|1
 CONTRAST =     2   # Contrast enhancement, 0=none
 
+SW       =     8   # Sample width/size in bytes
 # Coefficients used in rnd()
 ir = 0
 ia = 9301
@@ -121,38 +119,36 @@ def preprocess_cell(px, avg):
 preprocess_matrix = np.vectorize(preprocess_cell)
 preprocess_matrix.excluded.add(1)
 
-def set_constants():
-      k     = 0
-   b     = 0
-   d     = D
+k     = 0
+b     = 0
+d     = D
 
-   # ns = sample_freq * image_to_sound_time
-   # ns = total number of samples per sound byte
-   ns    = 2 * int(0.5*FS*T)
+# ns = sample_freq * image_to_sound_time
+# ns = total number of samples per sound byte
+ns    = 2 * int(0.5*FS*T)
 
-   #Number of samples per pixel
-   m     = int(ns / N)
-   sso   = 0 if HIFI else 128
-   ssm   = 32768 if HIFI else 128
-   scale = 0.5 / math.sqrt(M)
-   dt    = 1.0 / FS
-   v     = 340.0                                 # v = speed of sound (m/s)
-   hs    = 0.20           # hs = characteristic acoustical size of head (m)
+#Number of samples per pixel
+m     = int(ns / N)
+sso   = 0 if HIFI else 128
+ssm   = 32768 if HIFI else 128
+scale = 0.5 / math.sqrt(M)
+dt    = 1.0 / FS
+v     = 340.0                                 # v = speed of sound (m/s)
+hs    = 0.20           # hs = characteristic acoustical size of head (m)
 
-   w    = [0 for i in range(M)]
-   phi0 = [0 for i in range(M)]
-   A    = [[0 for j in range(N)] for i in range(M)]  # Empty M x N pixel matrix
+w    = [0 for i in range(M)]
+phi0 = [0 for i in range(M)]
+A    = [[0 for j in range(N)] for i in range(M)]  # Empty M x N pixel matrix
 
-   # Set lin|exp (0|1) frequency distribution and random initial phase 
-   if (d): 
-      for i in range(0,M): w[i] = TwoPi * FL * pow(1.0* FH/FL,1.0*i/(M-1))
-   else: 
-      for i in range(0,M): w[i] = TwoPi * FL + TwoPi * (FH-FL)   *i/(M-1)
-   for i in range(0,M): phi0[i] = TwoPi * rnd()
+# Set lin|exp (0|1) frequency distribution and random initial phase 
+if (d): 
+   for i in range(0,M): w[i] = TwoPi * FL * pow(1.0* FH/FL,1.0*i/(M-1))
+else: 
+   for i in range(0,M): w[i] = TwoPi * FL + TwoPi * (FH-FL)   *i/(M-1)
+for i in range(0,M): phi0[i] = TwoPi * rnd()
 
 
 def main():
-   set_constants()
 
    cam_id = 0  # First available OpenCV camera
    # Optionally override ID from command line parameter: python hificode_OpenCV.py cam_id
@@ -176,7 +172,7 @@ def main():
    key = 0
 
    # Write 8/16-bit mono/stereo .wav file
-   # fp = open(FNAME,'wb')
+   # fp = open(OUTPUT_FNAME,'wb')
    # fp.write(bytes('RIFF','UTF-8')); 
    # wl(fp,M*ns*HIST+36);
 
@@ -207,7 +203,7 @@ def main():
    # #Set total number of samples in WAV file
    # wl(fp,ns*HIST*M)
 
-   pygame.mixer.init(frequency=FS, size=8, channels=1, buffer=256)
+   pygame.mixer.init(frequency=FS, size=SW, channels=(STEREO+1), buffer=256)
    while cap.isOpened() and key != 27:  # Escape key
       ret, frame = cap.read()
    
@@ -380,7 +376,6 @@ def main():
    return 0
 
 def setup():
-   set_constants()
 
    try:
       cap = cv.VideoCapture(0)   
@@ -399,47 +394,13 @@ def setup():
       
    key = 0
 
-   # Write 8/16-bit mono/stereo .wav file
-   # fp = open(FNAME,'wb')
-   # fp.write(bytes('RIFF','UTF-8')); 
-   # wl(fp,M*ns*HIST+36);
-
-
-   # fp.write(bytes('WAVEfmt ','UTF-8')); 
-   # wl(fp,16); 
-   # wi(fp,1); 
-
-   # #Add more bytes to wav file
-   # #Set # of channels to 2
-   # wi(fp,2 if STEREO else 1); 
-
-   # #Set per-waveform sampling frequency/rate
-   # wl(fp,FS); 
-
-   # #Set all-waveform sampling frequency/rate
-   # wl(fp,FS*HIST); 
-
-   # #Set number of waveforms for the wav file
-   # wi(fp,HIST); 
-
-   # #Set bitrate of WAV file
-   # wi(fp,16 if HIFI else 8); 
-
-   # #Set encoding of data
-   # fp.write(bytes('data','UTF-8')); 
-
-   # #Set total number of samples in WAV file
-   # wl(fp,ns*HIST*M)
-
-   pygame.mixer.init(frequency=FS, size=8, channels=1, buffer=256)
-
    return cap
 
 def process_frame(cap):
    ret, frame = cap.read()
 
    if frame is None or ret is False:
-      return False
+      return [], False
       
    #Convert Frame to Black and White 
    # and then resize it to a NxM (height x width) image for processing
@@ -451,6 +412,10 @@ def process_frame(cap):
    avg = np.average(gray)
    B = np.flip(gray, 1)
    A = preprocess_matrix(B, avg)
+
+   #Update LiveFeed Window
+   cv.imshow('LiveFeed', gray)
+   cv.waitKey(1)
 
    tau1 = 0.5 / w[M-1]; tau2 = 0.25 * (tau1*tau1)
    y = yl = yr = z = zl = zr = 0.0
@@ -549,13 +514,32 @@ def process_frame(cap):
    end = current_milli_time()
    #TODO: remove this
    #print("time to generate wav bytes for frame: " + str((end - start)/1000))
-   
+   pygame.mixer.init(frequency=FS, size=SW, channels=(STEREO+1), buffer=1024)
    byte_string = bytes(byte_array)
    pygame.mixer.Sound(byte_string).play()
-   byte_array = []
-   return True
 
-def teardown(cap):
+   return byte_array, False
+
+def teardown(cap, file_byte_array):
+
+   pygame.mixer.init(frequency=FS, size=SW, channels=(STEREO+1), buffer=1024)
+   file_byte_string = bytes(file_byte_array)
+   snd = pygame.mixer.Sound(file_byte_string)
+
+   # open new wave file
+   sfile = wave.open('output_audio.wav', 'w')
+
+   # set the parameters
+   sfile.setframerate(FS)
+   sfile.setnchannels(1+STEREO)
+   sfile.setsampwidth(2)
+
+   # write raw PyGame sound buffer to wave file
+   sfile.writeframesraw(file_byte_string)
+
+   # close file
+   sfile.close()
+
    cap.release()
    cv.destroyAllWindows()
    return 0

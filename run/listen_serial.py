@@ -18,11 +18,11 @@ g_serial_state_mutex = threading.Lock()
 
 def serialWaitFor(conn, waitfor_chars):
     input = conn.read()
-    while(input not in waitfor_char):
+    while(str(input, 'ascii') not in waitfor_chars):
         input = conn.read()
     
-    receive_char = input.lower()
-    conn.write(receive_char)
+    receive_char = str(input, 'ascii').lower()
+    conn.write(str.encode(receive_char))
     return input
 
 def waitForStop(conn):
@@ -38,7 +38,7 @@ class GetSerialThread(threading.Thread):
 
         global g_video_state
         while(True):
-            print('Waiting for de1 start video command')
+            print('Waiting for de1 start command')
             commandType = serialWaitFor(self.conn, ['V', 'H'])
             g_current_state = "RUNNING"
 
@@ -76,7 +76,7 @@ def main():
 
 
     while(True):
-        while(g_current_state != "STOPPED" or g_current_category != "NONE"): continue;
+        while(g_current_state == "STOPPED" and g_current_category == "NONE"): continue;
         if g_current_category == "TRACKING":
             camera = tfnet.setup_camera()
             print('Setup darkflow camera')
@@ -89,7 +89,7 @@ def main():
 
             tfnet.teardown_camera()
             print('Saved video and metadata to cloud')
-        elif g_current_category == "SOUNDVISION":
+        else:
             camera = soundvision.setup()
             print('Setup soundvision')
 
@@ -97,13 +97,15 @@ def main():
                 print("ERROR: Setup failed!")
                 raise
 
-            should_break = False
-            while(g_current_state != "STOPPED" and should_break == False):
-                should_break = soundvision.process_frame(camera)
+            final_byte_array = []
+            while(g_current_state != "STOPPED"):
+                byte_array, should_break = soundvision.process_frame(camera)
+                if should_break is True:
+                    final_byte_array.extend(byte_array)
             print('Captured all frames for soundvision')
             should_break = False
 
-            soundvision.teardown(camera)
+            soundvision.teardown(camera, final_byte_array)
             print('Successfully exited soundvision')
 
 if __name__ == '__main__':
