@@ -8,8 +8,6 @@ FLAGS.config = "./darkflow/cfg/"
 FLAGS.demo = "camera" # video file to use, or if camera just put "camera"
 FLAGS.model = "./darkflow/cfg/tiny-yolo-voc.cfg" # tensorflow model
 FLAGS.load = "./darkflow/bin/tiny-yolo-voc.weights" # tensorflow weights
-# FLAGS.pbLoad = "tiny-yolo-voc-traffic.pb" # tensorflow model
-# FLAGS.metaLoad = "tiny-yolo-voc-traffic.meta" # tensorflow weights
 FLAGS.threshold = 0.5 # threshold of detection confidance (detection if confidance > threshold )
 FLAGS.gpu = 0 #how much of the GPU to use (between 0 and 1) 0 means use cpu
 FLAGS.track = True # wheither to activate tracking or not
@@ -40,9 +38,8 @@ def start_camera(check_is_end):
     from darkflow.net.build import TFNet
     tfnet = TFNet(FLAGS)
 
-    tfnet.start_video(check_is_end)
+    tfnet.camera()
     exit('Demo stopped, exit.')
 
 if __name__ == "__main__":
     start_camera()
-
