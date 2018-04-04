@@ -66,7 +66,7 @@ def save_faces(frame, faces, idx):
 
         if w > 150 and h < 400:
             crop_img = frame[y:y+h, x:x+w]
-            cv2.imwrite("./cv2_data/face_recog/training_data/s1/img" + str(i) + ".jpg", crop_img)
+            cv2.imwrite("./cv2_data/face_recog/training_data/s2/img" + str(i) + ".jpg", crop_img)
             i += 1
     return i
 

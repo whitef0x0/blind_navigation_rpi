@@ -1,5 +1,4 @@
 Cython==0.28
--e git+git@github.com:whitef0x0/darkflow.git@369d1dbcc257d7dd0ad9d1ba8b2c62fd609120e2#egg=darkflow&subdirectory=../../darkflow
 filterpy==1.2.1
 google-speech==1.0.16
 imutils==0.4.6
@@ -12,9 +11,9 @@ pytz==2018.3
 requests==2.18.4
 scipy==1.0.0
 six==1.11.0
--e git+git@github.com:whitef0x0/sort.git@ebd01427b8a7ba40d1cbdef8ab3b06671125b3f0#egg=sort&subdirectory=../../sort
 tensorboard==1.6.0
 tensorflow==1.6.0
 termcolor==1.1.0
 urllib3==1.22
 websocket-client==0.47.0
+pytesseract==0.2.0

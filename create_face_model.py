@@ -110,7 +110,7 @@ def main():
     print("Total labels: ", len(labels))
     recognizer = cv2.face.LBPHFaceRecognizer_create()
     recognizer.train(faces, np.array(labels))
-    recognizer.write("./cv2_data/face_recog/david_model.yaml")
+    recognizer.write("./cv2_data/face_recog/david_helen_model.yaml")
 
 if __name__ == '__main__':
     main()

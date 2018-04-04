@@ -17,13 +17,11 @@ FLAGS.trackObj = ["aeroplane", "bicycle", "bird", "boat", "bottle",
     "bus", "car", "cat", "chair", "cow", "diningtable", "dog",
     "horse", "motorbike", "person", "pottedplant", "sheep", "sofa",
     "train", "tvmonitor"]
-FLAGS.saveVideo = False  #whether to save the video or not
+FLAGS.saveVideo = True  #whether to save the video or not
 
-FLAGS.speech = True #whether to enable text to speech of labels
+FLAGS.speech = False #whether to enable text to speech of labels
 
-FLAGS.grayscale = False #whether to read images from webcam as black and white
-
-FLAGS.upload = False #whether or not to upload video to AWS
+FLAGS.upload = True #whether or not to upload video to AWS
 FLAGS.BK_MOG = False # activate background substraction using cv2 MOG substraction,
                         #to help in worst case scenarion when YOLO cannor predict(able to detect movement, it's not ideal but well)
                         # helps only when number of detection < 3, as it is still better than no detection.
@@ -33,11 +31,18 @@ FLAGS.csv = False #whether to write csv file or not(only when tracking is set to
 FLAGS.display = True # display the tracking or not
 FLAGS.face_recognition = True # enable face recognition
 
-def start_camera():
+def setup_TFNet():
     from darkflow.net.build import TFNet
     tfnet = TFNet(FLAGS)
-    tfnet.camera()
+    return tfnet
+
+def start_camera(check_is_end):
+    from darkflow.net.build import TFNet
+    tfnet = TFNet(FLAGS)
+
+    tfnet.start_video(check_is_end)
     exit('Demo stopped, exit.')
 
 if __name__ == "__main__":
     start_camera()
+
