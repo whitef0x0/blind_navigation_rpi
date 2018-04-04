@@ -34,7 +34,7 @@ def setup_TFNet():
     tfnet = TFNet(FLAGS)
     return tfnet
 
-def start_camera(check_is_end):
+def start_camera():
     from darkflow.net.build import TFNet
     tfnet = TFNet(FLAGS)
 
