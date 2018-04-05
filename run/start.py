@@ -15,11 +15,11 @@ FLAGS.trackObj = ["aeroplane", "bicycle", "bird", "boat", "bottle",
     "bus", "car", "cat", "chair", "cow", "diningtable", "dog",
     "horse", "motorbike", "person", "pottedplant", "sheep", "sofa",
     "train", "tvmonitor"]
-FLAGS.saveVideo = True  #whether to save the video or not
+FLAGS.saveVideo = False  #whether to save the video or not
 
 FLAGS.speech = False #whether to enable text to speech of labels
 
-FLAGS.upload = True #whether or not to upload video to AWS
+FLAGS.upload = False #whether or not to upload video to AWS
 FLAGS.BK_MOG = False # activate background substraction using cv2 MOG substraction,
                         #to help in worst case scenarion when YOLO cannor predict(able to detect movement, it's not ideal but well)
                         # helps only when number of detection < 3, as it is still better than no detection.

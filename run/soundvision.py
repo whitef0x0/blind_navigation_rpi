@@ -1,4 +1,3 @@
-
 # Direct port of the hificode_OpenCV.c C program minus built-in image
 # Last update: March 19, 2016; released under the Creative
 # Commons Attribution 4.0 International License (CC BY 4.0), 
@@ -11,7 +10,6 @@ import cv2 as cv
 import os, sys, struct, math
 import wave
 import sys
-import pyaudio
 import pygame
 import imutils
 import io
@@ -20,6 +18,7 @@ import numpy as np
 from time import time as timer
 current_milli_time = lambda: int(round(timer() * 1))
 
+INPUT_FNAME = 'test_video.mov'
 OUTPUT_FNAME    = 'hificode.wav'       # User-defined parameters
 FL       =   500   # Lowest  frequency (Hz) in soundscape
 FH       =  5000   # Highest frequency (Hz)              
@@ -31,7 +30,7 @@ STEREO   =     0   # Mono|Stereo=0|1 sound selection
 DELAY    =     1   # Nodelay|Delay=0|1 model   (STEREO=1)
 FADE     =     1   # Relative fade No|Yes=0|1  (STEREO=1)
 DIFFR    =     1   # Diffraction No|Yes=0|1    (STEREO=1)
-BSPL     =     1   # Rectangular|B-spline=0|1 time window
+BSPL     =     0   # Rectangular|B-spline=0|1 time window
 BW       =     0   # 16|2-level=0|1 gray format in P[][]  
 CAM      =     1   # Use OpenCV camera input No|Yes=0|1  
 VIEW     =     0   # Screen view for debugging No|Yes=0|1
@@ -58,38 +57,6 @@ if CAM:
 else:
    N = 64
    M = 48
-
-#if BW:
-#else:   
-
-CHUNK = 1024
-
-def playSound(file):
-   if sys.platform == "win32":
-      winsound.PlaySound(file,winsound.SND_FILENAME)  # Windows only
-      #os.system('start %s' %file)                    # Windows only
-   elif sys.platform.startswith('linux'): 
-      print("No audio player called for Linux")
-   else:
-      wf = wave.open(file, 'rb')
-
-      p = pyaudio.PyAudio()
-
-      stream = p.open(format=p.get_format_from_width(wf.getsampwidth()),
-                channels=wf.getnchannels(),
-                rate=wf.getframerate(),
-                output=True) 
-
-      data = wf.readframes(CHUNK)
-
-      while data != '':
-         stream.write(data)
-         data = wf.readframes(CHUNK)
-
-      stream.stop_stream()
-      stream.close()
-
-      p.terminate()
 
 def wi(fp,i):
    b0 = int(i%256)
@@ -149,12 +116,8 @@ for i in range(0,M): phi0[i] = TwoPi * rnd()
 
 def main():
 
-   cam_id = 0  # First available OpenCV camera
-   # Optionally override ID from command line parameter: python hificode_OpenCV.py cam_id
-   if len(sys.argv) > 1: cam_id = int(sys.argv[1])
-
    try:
-      cap = cv.VideoCapture(INPUT_FNAME)   
+      cap = cv.VideoCapture(0)   
       if not cap.isOpened(): 
          raise ValueError('camera ID')
    except ValueError:
@@ -272,25 +235,25 @@ def main():
 
       byte_array = []
       start = current_milli_time()
+      k = 0
       if not STEREO:
          #Iterate through each sample for STEREO file and generate a waveform for each pixel
          while k < ns:
             j = int(k / m); j=N-1 if j>N-1 else j; s = 0.0; t = k * dt
             if k < ns/(5*N): s = (2.0*rnd()-1.0) / scale  # "click"
-            #Set parameters if using B-Splines
-            if BSPL:
-               #Set q = sample%samples_per_pixel / samples_per_pixel - 1
-               # q is set to 0 if we are at start of wave for pixel, otherwise it is set to 
-               q = 1.0 * (k%m)/(m-1)
-               q2 = 0.5*q*q
 
-               for i in range(0,M):
-                  if BSPL:  # Quadratic B-spline for smooth C1 time window
-                     if j==0: a = (1.0-q2)*A[i][j]+q2*A[i][j+1]
-                     elif j==N-1: a = (q2-q+0.5)*A[i][j-1]+(0.5+q-q2)*A[i][j]
-                     else: a = (q2-q+0.5)*A[i][j-1]+(0.5+q-q*q)*A[i][j]+q2*A[i][j+1]
-                  else: a = A[i][j]  # Rectangular time window
-                  s += a * math.sin(w[i] * t + phi0[i])
+            #Set q = sample%samples_per_pixel / samples_per_pixel - 1
+            # q is set to 0 if we are at start of wave for pixel, otherwise it is set to 
+            q = 1.0 * (k%m)/(m-1)
+            q2 = 0.5*q*q
+
+            for i in range(0,M):
+               if BSPL:  # Quadratic B-spline for smooth C1 time window
+                  if j==0: a = (1.0-q2)*A[i][j]+q2*A[i][j+1]
+                  elif j==N-1: a = (q2-q+0.5)*A[i][j-1]+(0.5+q-q2)*A[i][j]
+                  else: a = (q2-q+0.5)*A[i][j-1]+(0.5+q-q*q)*A[i][j]+q2*A[i][j+1]
+               else: a = A[i][j]  # Rectangular time window
+               s += a * math.sin(w[i] * t + phi0[i])
 
             yp = y; y = tau1/dt + tau2/(dt*dt)
             y  = (s + y * yp + tau2/dt * z) / (1.0 + y); z = (y - yp) / dt
@@ -375,31 +338,11 @@ def main():
    return 0
 
 def setup():
+   cv.namedWindow('SoundVision')
 
-   try:
-      cap = cv.VideoCapture(0)   
-      if not cap.isOpened(): 
-         return None
-   except ValueError:
-      print("Could not open camera", 0)
-      return None
-
-   # Setting standard capture size, may fail; resize later
-   frame = cap.read()  # Dummy read needed with some devices
-      
-   if VIEW:  # Screen views only for debugging
-      cv.namedWindow('Large', cv.WINDOW_AUTOSIZE);
-      cv.namedWindow('Small', cv.WINDOW_AUTOSIZE);
-      
-   key = 0
-
-   return cap
-
-def process_frame(cap):
-   ret, frame = cap.read()
-
-   if frame is None or ret is False:
-      return [], False
+def process_frame(frame):
+   if frame is None:
+      return False
       
    #Convert Frame to Black and White 
    # and then resize it to a NxM (height x width) image for processing
@@ -413,7 +356,7 @@ def process_frame(cap):
    A = preprocess_matrix(B, avg)
 
    #Update LiveFeed Window
-   cv.imshow('LiveFeed', gray)
+   cv.imshow('SoundVision', gray)
    cv.waitKey(1)
 
    tau1 = 0.5 / w[M-1]; tau2 = 0.25 * (tau1*tau1)
@@ -421,6 +364,7 @@ def process_frame(cap):
 
    byte_array = []
    start = current_milli_time()
+   k = 0
    if not STEREO:
       #Iterate through each sample for STEREO file and generate a waveform for each pixel
       while k < ns:
@@ -517,7 +461,7 @@ def process_frame(cap):
    byte_string = bytes(byte_array)
    pygame.mixer.Sound(byte_string).play()
 
-   return byte_array, False
+   return False
 
 def teardown(cap, file_byte_array):
 
