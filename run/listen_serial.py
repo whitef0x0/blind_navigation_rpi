@@ -16,6 +16,7 @@ g_current_category = "NONE"
 #Mutexes for shared variables
 g_serial_state_mutex = threading.Lock()
 
+# Wait for connection from out serial ports
 def serialWaitFor(conn, waitfor_chars):
     input = conn.read()
     while(str(input, 'ascii') not in waitfor_chars):
@@ -28,6 +29,7 @@ def serialWaitFor(conn, waitfor_chars):
 def waitForStop(conn):
     serialWaitFor(conn, ['S'])
 
+# Thread object to start a video with command from DE1-SoC
 class GetSerialThread(threading.Thread):
     def __init__(self, conn):
         threading.Thread.__init__(self)
@@ -38,10 +40,12 @@ class GetSerialThread(threading.Thread):
 
         global g_video_state
         while(True):
+            # Connect to DE1 to wait for commands from videos
             print('Waiting for de1 start command')
             commandType = serialWaitFor(self.conn, ['V', 'H'])
             g_current_state = "RUNNING"
 
+            # Switch between video tracking and sound image processing
             if commandType == 'V':
                 g_current_category = "TRACKING"
                 print('Received de1 start video command')
@@ -62,6 +66,7 @@ class GetSerialThread(threading.Thread):
             g_current_state = "STOPPED"
 def main():
 
+    # Start connection with a external serial device
     conn = serial.Serial("/dev/cu.usbserial", 115200, timeout=1)
 
     print("start serial conn with de1")
@@ -74,9 +79,9 @@ def main():
     g_video_state = "STOPPED"
     d1.start()
 
-
     while(True):
         while(g_current_state == "STOPPED" and g_current_category == "NONE"): continue;
+        # Part to set up an object tracking
         if g_current_category == "TRACKING":
             camera = tfnet.setup_camera()
             print('Setup darkflow camera')
@@ -89,6 +94,7 @@ def main():
 
             tfnet.teardown_camera()
             print('Saved video and metadata to cloud')
+        # Part to set up image sound conversion
         else:
             camera = soundvision.setup()
             print('Setup soundvision')
@@ -110,6 +116,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-        
-        
