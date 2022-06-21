@@ -3,7 +3,7 @@ filterpy==1.2.1
 google-speech==1.0.16
 imutils==0.4.6
 matplotlib==2.2.0
-numpy==1.14.2
+numpy==1.22.0
 opencv-contrib-python==3.3.0.10
 opencv-python==3.3.0.10
 Pillow==5.0.0
